@@ -16,7 +16,7 @@ const formatDate = (dateString) => {
 const PreverDemissao = ({ open, onClose, row, setRow, fetchData }) => {
   const { empresaId } = useContext(EmpresaContext);
   const [dataDemissao, setDataDemissao] = useState('');
-  const [prevDemissao, setPrevDemissao] = useState(0); // Usar 0 ou 1 conforme a lógica
+  const [ ,setPrevDemissao] = useState(0); // Usar 0 ou 1 conforme a lógica
 
   useEffect(() => {
     if (row && row.data_demissao) {
