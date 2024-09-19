@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Paper, PaperProps } from '@mui/material';
 import { alterarJustificativaApi } from './Api'; // Importa a função da API
 
@@ -16,15 +16,14 @@ function PaperComponent(props: PaperProps) {
     });
   };
 
-  // Usar useCallback para memorizar a função
-  const handleMouseMove = useCallback((event: MouseEvent) => {
+  const handleMouseMove = (event: MouseEvent) => {
     if (mouseDown) {
       setPosition({
         x: event.clientX - offset.x,
         y: event.clientY - offset.y,
       });
     }
-  }, [mouseDown, offset]);
+  };
 
   const handleMouseUp = () => {
     setMouseDown(false);
@@ -38,7 +37,7 @@ function PaperComponent(props: PaperProps) {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [handleMouseMove]); // Agora handleMouseMove é uma função estável
+  }, [mouseDown,handleMouseMove, offset]);
 
   return (
     <Paper

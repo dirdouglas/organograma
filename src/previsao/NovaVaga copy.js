@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { TextField, Button, Dialog, DialogActions, DialogContent, DialogTitle, Autocomplete, Checkbox, FormControlLabel } from '@mui/material';
 import { EmpresaContext } from '../EmpresaContext'; // Importa o contexto da empresa
 import { listarFuncoes, listarDepartamentos, preverVagaApi } from './Api'; // Chama a API separada
@@ -22,25 +22,10 @@ const NovaVaga = ({ open, onClose, fetchData, duplicarRegistro = false, row }) =
   const [departamentos, setDepartamentos] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Função carregarDados com useCallback para evitar recriação desnecessária
-  const carregarDados = useCallback(async () => {
-    try {
-      setLoading(true);
-      const funcoesResponse = await listarFuncoes(empresaId);
-      const departamentosResponse = await listarDepartamentos(empresaId);
-      setFuncoes(funcoesResponse);
-      setDepartamentos(departamentosResponse);
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [empresaId]);
-
   useEffect(() => {
     // Carregar funções e departamentos ao montar o componente
     carregarDados();
-
+    console.log(row);
     if (duplicarRegistro && row) {
       // Se for duplicação, carregar os dados de row
       const dataContratacao = row.data_prevista_contratacao
@@ -60,7 +45,21 @@ const NovaVaga = ({ open, onClose, fetchData, duplicarRegistro = false, row }) =
         id_funcionario: null,
       });
     }
-  }, [empresaId, duplicarRegistro, row, carregarDados]);
+  }, [empresaId, carregarDados, duplicarRegistro, row]);
+
+  const carregarDados = async () => {
+    try {
+      setLoading(true);
+      const funcoesResponse = await listarFuncoes(empresaId);
+      const departamentosResponse = await listarDepartamentos(empresaId);
+      setFuncoes(funcoesResponse);
+      setDepartamentos(departamentosResponse);
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFuncaoChange = (event, newValue) => {
     setFormData((prevState) => ({

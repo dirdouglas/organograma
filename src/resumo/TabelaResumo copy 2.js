@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -21,8 +21,18 @@ const TabelaResumo = ({ empresaId, idGestor, adm, dataSelecionada, setDadosFiltr
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [openRows, setOpenRows] = useState({}); // Para controlar quais linhas estão abertas
 
-  // Envolver a função carregarResumo com useCallback
-  const carregarResumo = useCallback(async () => {
+  useEffect(() => {
+    if (empresaId) {
+      carregarResumo();
+    }
+  }, [empresaId, idGestor, adm, dataSelecionada, carregarResumo]);
+
+  useEffect(() => {
+    // Sempre que os dados forem carregados ou atualizados, filtrar e passar para o ResumoQuadroPrevisto
+    setDadosFiltrados(resumo);
+  }, [resumo, setDadosFiltrados]);
+
+  const carregarResumo = async () => {
     try {
       const params = {
         data_referencia: dataSelecionada,
@@ -41,18 +51,7 @@ const TabelaResumo = ({ empresaId, idGestor, adm, dataSelecionada, setDadosFiltr
     } catch (error) {
       console.error('Erro ao carregar os dados:', error);
     }
-  }, [empresaId, idGestor, adm, dataSelecionada]);
-
-  useEffect(() => {
-    if (empresaId) {
-      carregarResumo();
-    }
-  }, [empresaId, carregarResumo]);
-
-  useEffect(() => {
-    // Sempre que os dados forem carregados ou atualizados, filtrar e passar para o ResumoQuadroPrevisto
-    setDadosFiltrados(resumo);
-  }, [resumo, setDadosFiltrados]);
+  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
