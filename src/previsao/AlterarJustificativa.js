@@ -37,7 +37,7 @@ function PaperComponent(props: PaperProps) {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [mouseDown, offset]);
+  }, [mouseDown,handleMouseMove, offset]);
 
   return (
     <Paper

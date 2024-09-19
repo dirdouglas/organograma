@@ -45,7 +45,7 @@ const NovaVaga = ({ open, onClose, fetchData, duplicarRegistro = false, row }) =
         id_funcionario: null,
       });
     }
-  }, [empresaId, duplicarRegistro, row]);
+  }, [empresaId, carregarDados, duplicarRegistro, row]);
 
   const carregarDados = async () => {
     try {

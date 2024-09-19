@@ -25,7 +25,7 @@ const TabelaResumo = ({ empresaId, idGestor, adm, dataSelecionada, setDadosFiltr
     if (empresaId) {
       carregarResumo();
     }
-  }, [empresaId, idGestor, adm, dataSelecionada]);
+  }, [empresaId, idGestor, adm, dataSelecionada, carregarResumo]);
 
   useEffect(() => {
     // Sempre que os dados forem carregados ou atualizados, filtrar e passar para o ResumoQuadroPrevisto
