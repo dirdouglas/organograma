@@ -15,7 +15,7 @@ import FooterResumo from './resumo/FooterResumo';
 import { carregarResumo } from './previsao/Api';
 
 const ResumoQuadroPrevisto = () => {
-  //const [dataSelecionada, setDataSelecionada] = useState(dayjs().format('YYYY-MM-DD'));
+  const [dataSelecionada] = useState(dayjs().format('YYYY-MM-DD'));
   const [dados, setDados] = useState([]);
   const [dadosFiltrados, setDadosFiltrados] = useState([]);
   const [filtros, setFiltros] = useState({
