@@ -15,7 +15,7 @@ import { fetchFuncionariosPrevistos } from './FuncionariosPrevistos'; // Ajuste 
 const drawerWidth = 240;
 
 const Layout = () => {
-  const [mobileOpen, setMobileOpen] = useState(false);
+  //const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { empresaId, changeEmpresaId } = useContext(EmpresaContext);

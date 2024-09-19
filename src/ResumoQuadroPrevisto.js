@@ -6,7 +6,6 @@ import {
   Backdrop,
   CircularProgress,
   Alert,
-  Button,
 } from '@mui/material';
 import dayjs from 'dayjs';
 import { EmpresaContext } from './EmpresaContext';
@@ -16,7 +15,7 @@ import FooterResumo from './resumo/FooterResumo';
 import { carregarResumo } from './previsao/Api';
 
 const ResumoQuadroPrevisto = () => {
-  const [dataSelecionada, setDataSelecionada] = useState(dayjs().format('YYYY-MM-DD'));
+  //const [dataSelecionada, setDataSelecionada] = useState(dayjs().format('YYYY-MM-DD'));
   const [dados, setDados] = useState([]);
   const [dadosFiltrados, setDadosFiltrados] = useState([]);
   const [filtros, setFiltros] = useState({
