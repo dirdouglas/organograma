@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
   TextField,
   Autocomplete,
@@ -36,22 +36,22 @@ const AlterarFuncaoDialog = ({
     }
   };
 
-  // Função para carregar as funções da API
-  const carregarFuncoes = async () => {
+  // Função para carregar as funções da API, agora envolvida em useCallback
+  const carregarFuncoes = useCallback(async () => {
     try {
       const funcoesCarregadas = await listarFuncoes(empresaId); // Chama a função para listar funções
       setFuncoes(funcoesCarregadas); // Armazena as funções no estado
     } catch (error) {
       console.error('Erro ao carregar as funções:', error);
     }
-  };
+  }, [empresaId]); // Inclui `empresaId` como dependência
 
   // Hook para carregar as funções quando o diálogo for aberto
   useEffect(() => {
     if (open) {
       carregarFuncoes();
     }
-  }, [open, empresaId]);
+  }, [open, carregarFuncoes]); // Inclui `carregarFuncoes` como dependência
 
   return (
     <Dialog

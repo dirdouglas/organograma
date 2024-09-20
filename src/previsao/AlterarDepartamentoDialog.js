@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
   TextField,
   Autocomplete,
@@ -36,22 +36,22 @@ const AlterarDepartamentoDialog = ({
     }
   };
 
-  // Função para carregar os departamentos da API
-  const carregarDepartamentos = async () => {
+  // Função para carregar os departamentos da API, agora envolvida em useCallback
+  const carregarDepartamentos = useCallback(async () => {
     try {
       const departamentosCarregados = await listarDepartamentos(empresaId); // Chama a função para listar departamentos
       setDepartamentos(departamentosCarregados); // Armazena os departamentos no estado
     } catch (error) {
       console.error('Erro ao carregar os departamentos:', error);
     }
-  };
+  }, [empresaId]); // Adiciona `empresaId` como dependência para garantir que a função seja atualizada quando o ID mudar
 
   // Hook para carregar os departamentos quando o diálogo for aberto
   useEffect(() => {
     if (open) {
       carregarDepartamentos();
     }
-  }, [open, empresaId]);
+  }, [open, carregarDepartamentos]); // Inclui `carregarDepartamentos` como dependência do hook
 
   return (
     <Dialog
