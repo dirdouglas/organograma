@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   TextField,
   Autocomplete,
@@ -8,49 +8,50 @@ import {
   Dialog,
   DialogTitle,
 } from '@mui/material';
-import axios from 'axios';
-import { EmpresaContext } from '../EmpresaContext'; // Importa o contexto
+import { listarFuncoes, alterarFuncao } from './Api'; // Importar as funções da API
+import { EmpresaContext } from '../EmpresaContext'; // Importar o contexto da empresa
 
 const AlterarFuncaoDialog = ({ 
   open, 
   onClose, 
   selectedRow, 
-  fetchData, 
-  funcoes // Agora recebemos as funções como prop
+  fetchData 
 }) => {
+  const [funcoes, setFuncoes] = useState([]); // Armazena as funções carregadas
   const [funcaoSelecionada, setFuncaoSelecionada] = useState(null);
-  const { empresaId } = useContext(EmpresaContext); // Pega empresaId diretamente do contexto
+  const { empresaId } = useContext(EmpresaContext); // Obtém o ID da empresa do contexto
 
+  // Função para salvar a função selecionada
   const handleSaveFuncao = async () => {
     if (selectedRow && funcaoSelecionada) {
       try {
-        // Construir o corpo da requisição no formato necessário
-        const requestBody = {
-          httpMethod: "POST",
-          body: JSON.stringify({
-            id: String(selectedRow.id),  // Matricula do funcionário (id_funcionario)
-            id_funcao_prevista: funcaoSelecionada.id_funcao, // ID da função selecionada
-          }),
-        };
-  
-        // Enviar a requisição POST com o formato correto
-        await axios.post(
-          'https://44d5uoizbg.execute-api.us-east-1.amazonaws.com/dev/listar-funcoes', // Substitua pela URL da sua API Lambda
-          requestBody,
-          {
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-  
-        onClose(); // Fecha o dialog
-        fetchData(empresaId); // Recarrega os dados após a alteração utilizando empresaId do contexto
+        // Chama a função de alterar função no Api.js
+        await alterarFuncao(selectedRow.id, funcaoSelecionada.id);
+
+        onClose(); // Fecha o diálogo
+        fetchData(empresaId); // Recarrega os dados após a alteração
       } catch (error) {
         console.error('Erro ao salvar a função:', error);
       }
     }
   };
+
+  // Função para carregar as funções da API
+  const carregarFuncoes = async () => {
+    try {
+      const funcoesCarregadas = await listarFuncoes(empresaId); // Chama a função para listar funções
+      setFuncoes(funcoesCarregadas); // Armazena as funções no estado
+    } catch (error) {
+      console.error('Erro ao carregar as funções:', error);
+    }
+  };
+
+  // Hook para carregar as funções quando o diálogo for aberto
+  useEffect(() => {
+    if (open) {
+      carregarFuncoes();
+    }
+  }, [open, empresaId]);
 
   return (
     <Dialog
@@ -67,8 +68,8 @@ const AlterarFuncaoDialog = ({
       <DialogTitle>Alterar Função Prevista</DialogTitle>
       <DialogContent>
         <Autocomplete
-          options={funcoes} // Usa as funções carregadas
-          getOptionLabel={(option) => `${option.codigo} - ${option.descricao}`}
+          options={funcoes} // Lista de funções carregadas da API
+          getOptionLabel={(option) => `${option.codigo} - ${option.descricao}`} // Exibe o código e a descrição
           isOptionEqualToValue={(option, value) => option.codigo === value.codigo} // Compara pelo código da função
           renderInput={(params) => (
             <TextField 
@@ -82,9 +83,9 @@ const AlterarFuncaoDialog = ({
           onChange={(event, newValue) => {
             if (newValue) {
               setFuncaoSelecionada({
-                id_funcao: newValue.id, // Captura o id_funcao ao selecionar
-                codigo: newValue.codigo, // Captura o código
-                descricao: newValue.descricao // Captura a descrição
+                id: newValue.id, // ID da função selecionada
+                codigo: newValue.codigo, // Código da função selecionada
+                descricao: newValue.descricao, // Descrição da função selecionada
               });
             } else {
               setFuncaoSelecionada(null);

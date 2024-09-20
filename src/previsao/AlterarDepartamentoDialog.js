@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   TextField,
   Autocomplete,
@@ -8,49 +8,50 @@ import {
   Dialog,
   DialogTitle,
 } from '@mui/material';
-import axios from 'axios';
-import { EmpresaContext } from '../EmpresaContext'; // Importa o contexto
+import { listarDepartamentos, alterarDepartamento } from './Api'; // Importa a função de alterar o departamento
+import { EmpresaContext } from '../EmpresaContext'; // Importa o contexto da empresa
 
 const AlterarDepartamentoDialog = ({ 
   open, 
   onClose, 
   selectedRow, 
-  fetchData,
-  departamentos // Agora recebemos os departamentos como prop
+  fetchData 
 }) => {
+  const [departamentos, setDepartamentos] = useState([]); // Estado para armazenar os departamentos
   const [departamentoSelecionado, setDepartamentoSelecionado] = useState(null);
-  const { empresaId } = useContext(EmpresaContext); // Pega empresaId diretamente do contexto
+  const { empresaId } = useContext(EmpresaContext); // Obtém o ID da empresa do contexto
 
+  // Função para salvar o departamento selecionado
   const handleSaveDepartamento = async () => {
     if (selectedRow && departamentoSelecionado) {
       try {
-        // Construir o corpo da requisição no formato necessário
-        const requestBody = {
-          httpMethod: "POST",
-          body: JSON.stringify({
-            id: String(selectedRow.id),  // Matricula do funcionário (id_funcionario)
-            id_departamento_previsto: departamentoSelecionado.id_departamento, // ID do departamento selecionado
-          }),
-        };
+        // Chama a função de alterar departamento no Api.js, passando o `id`
+        await alterarDepartamento(selectedRow.id, departamentoSelecionado.id);
 
-        // Enviar a requisição POST com o formato correto
-        await axios.post(
-          'https://jra0np42jc.execute-api.us-east-1.amazonaws.com/dev/departamentos',
-          requestBody, // Passa o corpo como segundo argumento
-          {
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-
-        onClose(); // Fecha o dialog
-        fetchData(empresaId); // Recarrega os dados após a alteração, utilizando empresaId do contexto
+        onClose(); // Fecha o diálogo
+        fetchData(empresaId); // Recarrega os dados após a alteração
       } catch (error) {
         console.error('Erro ao salvar o departamento:', error);
       }
     }
   };
+
+  // Função para carregar os departamentos da API
+  const carregarDepartamentos = async () => {
+    try {
+      const departamentosCarregados = await listarDepartamentos(empresaId); // Chama a função para listar departamentos
+      setDepartamentos(departamentosCarregados); // Armazena os departamentos no estado
+    } catch (error) {
+      console.error('Erro ao carregar os departamentos:', error);
+    }
+  };
+
+  // Hook para carregar os departamentos quando o diálogo for aberto
+  useEffect(() => {
+    if (open) {
+      carregarDepartamentos();
+    }
+  }, [open, empresaId]);
 
   return (
     <Dialog
@@ -60,15 +61,15 @@ const AlterarDepartamentoDialog = ({
       fullWidth
       PaperProps={{
         style: {
-          width: '30vw', 
+          width: '30vw',
         },
       }}
     >
       <DialogTitle>Alterar Departamento Previsto</DialogTitle>
       <DialogContent>
         <Autocomplete
-          options={departamentos} // Usa os departamentos carregados
-          getOptionLabel={(option) => `${option.codigo} - ${option.descricao}`}
+          options={departamentos} // Lista de departamentos carregados da API
+          getOptionLabel={(option) => `${option.codigo} - ${option.descricao}`} // Exibe o código e a descrição
           isOptionEqualToValue={(option, value) => option.codigo === value.codigo} // Compara pelo código do departamento
           renderInput={(params) => (
             <TextField 
@@ -82,9 +83,9 @@ const AlterarDepartamentoDialog = ({
           onChange={(event, newValue) => {
             if (newValue) {
               setDepartamentoSelecionado({
-                id_departamento: newValue.id, // Captura o id_departamento ao selecionar
-                codigo: newValue.codigo, // Captura o código
-                descricao: newValue.descricao // Captura a descrição
+                id: newValue.id, // ID do departamento selecionado
+                codigo: newValue.codigo, // Código do departamento selecionado
+                descricao: newValue.descricao, // Descrição do departamento selecionado
               });
             } else {
               setDepartamentoSelecionado(null);

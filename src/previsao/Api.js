@@ -284,3 +284,64 @@ export const carregarResumo = async (dataSelecionada, empresaId, idGestor, adm) 
   }
 };
 
+
+// Função para alterar o departamento previsto
+export const alterarDepartamento = async (id, id_departamento_previsto) => {
+  try {
+    // Montar o corpo da requisição, incluindo `httpMethod`
+    const requestBody = {
+      httpMethod: 'POST',  // Explicitamente informando que é um POST
+      body: JSON.stringify({
+        id: String(id),  // ID que será enviado
+        id_departamento_previsto: String(id_departamento_previsto)  // ID do novo departamento previsto
+      })
+    };
+
+    // Fazer a chamada POST para o endpoint
+    const response = await axios.post(
+      'https://jra0np42jc.execute-api.us-east-1.amazonaws.com/dev/departamentos',
+      requestBody, // Enviar o corpo da requisição com `httpMethod` e `body`
+      {
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+
+    return response.data; // Retornar os dados da resposta da API
+  } catch (error) {
+    console.error('Erro ao alterar o departamento previsto:', error);
+    throw new Error('Erro ao alterar o departamento previsto.');
+  }
+};
+
+
+
+// Função para alterar a função prevista
+export const alterarFuncao = async (id, id_funcao_prevista) => {
+  try {
+    // Montar o corpo da requisição
+    const requestBody = {
+      httpMethod: 'POST',  // Explicitamente informando que é um POST
+      body: JSON.stringify({
+        id: String(id),  // ID que será enviado
+        id_funcao_prevista: String(id_funcao_prevista)  // ID da nova função prevista
+      })
+    };
+
+    // Fazer a chamada POST para o endpoint da função
+    const response = await axios.post(
+      'https://44d5uoizbg.execute-api.us-east-1.amazonaws.com/dev/listar-funcoes',  // Substitua pela URL correta do endpoint
+      requestBody, // Enviar o corpo da requisição com `httpMethod` e `body`
+      {
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+
+    return response.data; // Retornar os dados da resposta da API
+  } catch (error) {
+    console.error('Erro ao alterar a função prevista:', error);
+    throw new Error('Erro ao alterar a função prevista.');
+  }
+};
+
+
+

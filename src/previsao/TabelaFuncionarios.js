@@ -1,67 +1,68 @@
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, TablePagination } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
-import InfoIcon from '@mui/icons-material/Info';
-import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
-import DeleteIcon from '@mui/icons-material/Delete';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
-import { confirmarPrevisaoApi, deletePrevisaoApi } from './Api'; // Importando as funções da API
-import AlterarJustificativa from './AlterarJustificativa'; // Importando o diálogo de justificativa
-import PreverDemissao from './PreverDemissao'; // Importando o diálogo de previsão de demissão
-import DeletePrevisao from './DeletePrevisao'; // Importando o diálogo de exclusão
-import NovaVaga from './NovaVaga';
+import { confirmarPrevisaoApi } from './Api';
+import AlterarDepartamentoDialog from './AlterarDepartamentoDialog';  // Importando o diálogo de departamento
+import AlterarFuncaoDialog from './AlterarFuncaoDialog';  // Importando o diálogo de função
 
-const TabelaFuncionarios = ({ filteredData, fetchData }) => {
+const TabelaFuncionarios = ({ filteredData, fetchData, departamentos = [], funcoes = [] }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(13);
-  const [localData, setLocalData] = useState([]); // Estado local para armazenar os dados passados
-  const [openJustificativaDialog, setOpenJustificativaDialog] = useState(false);
-  const [openDemissaoDialog, setOpenDemissaoDialog] = useState(false); // Estado para o diálogo de demissão
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false); // Estado para o diálogo de exclusão
+  const [localData, setLocalData] = useState([]);
   const [selectedRow, setSelectedRow] = useState(null);
-  const [openVagaDialog, setOpenVagaDialog] = useState(false);
+  const [openDepartamentoDialog, setOpenDepartamentoDialog] = useState(false);
+  const [openFuncaoDialog, setOpenFuncaoDialog] = useState(false);
 
-  const handleGroupAddClick = (row) => {
+  // Função para abrir o diálogo de alteração de departamento
+  const handleOpenDepartamentoDialog = (row) => {
     setSelectedRow(row);
-    setOpenVagaDialog(true);
+    setOpenDepartamentoDialog(true);
   };
 
-  const handleCloseVagaDialog = () => {
-    setOpenVagaDialog(false);
+  // Função para abrir o diálogo de alteração de função
+  const handleOpenFuncaoDialog = (row) => {
+    setSelectedRow(row);
+    setOpenFuncaoDialog(true);
+  };
+
+  const handleCloseDepartamentoDialog = () => {
+    setOpenDepartamentoDialog(false);
     setSelectedRow(null);
   };
 
-  // Função para alterar a página
+  const handleCloseFuncaoDialog = () => {
+    setOpenFuncaoDialog(false);
+    setSelectedRow(null);
+  };
+
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
 
-  // Função para alterar o número de linhas por página
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
 
-  // Função para definir a cor das linhas com base nos dados
+  // Função para definir a cor das linhas
   const getRowColor = (row) => {
     if (row.prev_confirmada === 1 && row.prev_demissao === 1) {
-      return '#ffcccc'; // Colaborador demitido
+      return '#ffcccc'; 
     } else if (row.prev_confirmada === 1 && row.prev_vaga === 1) {
-      return '#cce5ff'; // Vaga aberta
+      return '#cce5ff'; 
     } else if (row.prev_confirmada === 1) {
-      return '#ccffcc'; // Previsão confirmada
+      return '#ccffcc'; 
     } else {
-      return 'inherit'; // Padrão
+      return 'inherit'; 
     }
   };
 
-  // Função para confirmar previsão e atualizar a tabela
+  // Função para confirmar a previsão de funcionário
   const confirmarPrevisao = async (row) => {
     try {
       const novoValorConfirmacao = row.prev_confirmada === 1 ? 0 : 1;
       await confirmarPrevisaoApi(row.id, novoValorConfirmacao);
-
-      // Atualiza localmente a linha alterada
       setLocalData((prevData) =>
         prevData.map((r) => (r.id === row.id ? { ...r, prev_confirmada: novoValorConfirmacao } : r))
       );
@@ -70,69 +71,12 @@ const TabelaFuncionarios = ({ filteredData, fetchData }) => {
     }
   };
 
-  // Função para abrir o diálogo de justificativa
-  const handleClickOpenJustificativaDialog = (row) => {
-    setSelectedRow(row);
-    setOpenJustificativaDialog(true);
-  };
-
-  // Função para abrir o diálogo de demissão
-  const handleClickOpenDemissaoDialog = (row) => {
-    setSelectedRow(row);
-    setOpenDemissaoDialog(true);
-  };
-
-  // Função para abrir o diálogo de exclusão
-  const handleDeletePrevisao = (row) => {
-    setSelectedRow(row);
-    setOpenDeleteDialog(true);
-  };
-
-  // Função para confirmar a exclusão da previsão
-  const confirmDeletePrevisao = async () => {
-    if (!selectedRow) return;
-
-    try {
-      await deletePrevisaoApi(selectedRow.id); // Excluir a previsão
-
-      // Atualiza a lista de dados após a exclusão
-      fetchData();
-      setOpenDeleteDialog(false);
-      setSelectedRow(null);
-    } catch (error) {
-      console.error('Erro ao excluir a previsão:', error);
-    }
-  };
-
-  // Atualizar localData quando filteredData mudar
   useEffect(() => {
     setLocalData(filteredData);
     setPage(0);
   }, [filteredData]);
 
-  // Função para atualizar a linha inteira localmente
-  const setRow = (updatedRow) => {
-    setLocalData((prevData) =>
-      prevData.map((row) => {
-        if (row.id === updatedRow.id) {
-          return {
-            ...row, // Preserva todos os campos anteriores
-            ...updatedRow, // Sobrescreve com os dados novos de updatedRow
-          };
-        }
-        return row; // Retorna a linha original se o ID não for o mesmo
-      })
-    );
-  };
-
-  // Atualizar justificativa diretamente no localData sem fetch
-  const atualizarJustificativaLocal = (justificativa) => {
-    setLocalData((prevData) =>
-      prevData.map((row) => (row.id === selectedRow.id ? { ...row, justificativa } : row))
-    );
-  };
-
-  // Obter os dados da página atual
+  // Função para renderizar a tabela com paginação
   const paginatedData = localData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
@@ -145,7 +89,7 @@ const TabelaFuncionarios = ({ filteredData, fetchData }) => {
               <TableCell style={headStyle}>Nome do Colaborador</TableCell>
               <TableCell style={headStyle}>Função Atual</TableCell>
               <TableCell style={headStyle}>Função Prevista</TableCell>
-              <TableCell style={headStyle}>Departamento</TableCell>
+              <TableCell style={headStyle}>Departamento Previsto</TableCell>
               <TableCell style={headStyle}>Contratação</TableCell>
               <TableCell style={headStyle}>Demissão</TableCell>
               <TableCell style={headStyle}>Ações</TableCell>
@@ -157,10 +101,17 @@ const TabelaFuncionarios = ({ filteredData, fetchData }) => {
                 <TableCell style={rowStyle}>{row.matricula}</TableCell>
                 <TableCell style={rowStyle}>{row.nome_colaborador}</TableCell>
                 <TableCell style={rowStyle}>{row.descricao_funcao_atual}</TableCell>
-                <TableCell style={rowClickableStyle} onClick={() => confirmarPrevisao(row)}>
+                
+                {/* Função Prevista - Abre o diálogo para alterar a função ao clicar */}
+                <TableCell style={rowClickableStyle} onClick={() => handleOpenFuncaoDialog(row)}>
                   {row.descricao_funcao_prevista}
                 </TableCell>
-                <TableCell style={rowClickableStyle}>{row.descricao_departamento}</TableCell>
+
+                {/* Departamento Previsto - Abre o diálogo para alterar o departamento ao clicar */}
+                <TableCell style={rowClickableStyle} onClick={() => handleOpenDepartamentoDialog(row)}>
+                  {row.descricao_departamento}
+                </TableCell>
+
                 <TableCell style={rowStyle}>{new Date(row.data_contratacao).toLocaleDateString()}</TableCell>
                 <TableCell style={rowStyle}>
                   {row.data_demissao ? new Date(row.data_demissao).toLocaleDateString() : ''}
@@ -169,16 +120,7 @@ const TabelaFuncionarios = ({ filteredData, fetchData }) => {
                   <IconButton onClick={() => confirmarPrevisao(row)}>
                     <CheckIcon style={{ fontSize: 15 }} />
                   </IconButton>
-                  <IconButton onClick={() => handleClickOpenJustificativaDialog(row)}>
-                    <InfoIcon style={{ fontSize: 15 }} />
-                  </IconButton>
-                  <IconButton onClick={() => handleClickOpenDemissaoDialog(row)}>
-                    <PersonRemoveIcon style={{ fontSize: 15 }} />
-                  </IconButton>
-                  <IconButton onClick={() => handleDeletePrevisao(row)}>
-                    <DeleteIcon style={{ fontSize: 15 }} />
-                  </IconButton>
-                  <IconButton onClick={() => handleGroupAddClick(row)}>
+                  <IconButton>
                     <GroupAddIcon style={{ fontSize: 15 }} />
                   </IconButton>
                 </TableCell>
@@ -188,7 +130,6 @@ const TabelaFuncionarios = ({ filteredData, fetchData }) => {
         </Table>
       </TableContainer>
 
-      {/* Componente de paginação */}
       <TablePagination
         rowsPerPageOptions={[13, 50, 100]}
         component="div"
@@ -199,52 +140,32 @@ const TabelaFuncionarios = ({ filteredData, fetchData }) => {
         onRowsPerPageChange={handleChangeRowsPerPage}
       />
 
-      {/* Diálogo de justificativa */}
+      {/* Diálogo de Alterar Departamento */}
       {selectedRow && (
-        <AlterarJustificativa
-          open={openJustificativaDialog}
-          onClose={() => setOpenJustificativaDialog(false)}
-          row={selectedRow}
-          setRow={setRow}
-          atualizarJustificativaLocal={atualizarJustificativaLocal}
-        />
-      )}
-
-      {/* Diálogo de demissão */}
-      {selectedRow && (
-        <PreverDemissao
-          open={openDemissaoDialog}
-          onClose={() => setOpenDemissaoDialog(false)}
-          row={selectedRow}
-          setRow={setRow}
-        />
-      )}
-
-      {/* Diálogo de exclusão */}
-      {selectedRow && (
-        <DeletePrevisao
-          open={openDeleteDialog}
-          onClose={() => setOpenDeleteDialog(false)}
-          onDelete={confirmDeletePrevisao}
-        />
-      )}
-
-      {/* Diálogo de exclusão */}
-      {selectedRow && (
-        <NovaVaga
-          open={openVagaDialog}
-          onClose={handleCloseVagaDialog}
+        <AlterarDepartamentoDialog
+          open={openDepartamentoDialog}
+          onClose={handleCloseDepartamentoDialog}
+          selectedRow={selectedRow}
           fetchData={fetchData}
-          duplicarRegistro={true} // Passando como duplicação de registro
-          row={selectedRow}  // Passando a linha selecionada
+          departamentos={departamentos || []}  // Removeu o comentário de bloco
         />
       )}
 
+      {/* Diálogo de Alterar Função */}
+      {selectedRow && (
+        <AlterarFuncaoDialog
+          open={openFuncaoDialog}
+          onClose={handleCloseFuncaoDialog}
+          selectedRow={selectedRow}
+          fetchData={fetchData}
+          funcoes={funcoes || []}  // Removeu o comentário de bloco
+        />
+      )}
     </Paper>
   );
 };
 
-// Estilos ajustados
+// Estilos de cabeçalhos e células
 const headStyle = {
   backgroundColor: '#1976d2',
   color: '#fff',

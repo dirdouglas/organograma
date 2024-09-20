@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useContext } from 'react';
 import {
   Container,
   Typography,
@@ -14,6 +14,7 @@ import {
 } from './previsao/Api';
 import TabelaAtivos from './ativos/TabelaAtivos';
 import Filtros from './previsao/Filtros';
+import { EmpresaContext } from './EmpresaContext'; // Importa o contexto da empresa
 
 // Cria uma referência externa para a função
 let fetchFuncionariosAtivosRef = null;
@@ -28,14 +29,13 @@ const FuncionariosAtivos = () => {
     status: '',
     tipoContrato: '',
     gestor: '',
-    agrupamento: '', // Filtro para o agrupamento usando nivel_departamento_2
+    agrupamento: '',
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const adm = localStorage.getItem('adm');
-  const id_gestor = localStorage.getItem('id_gestor');
-  const id_empresa = localStorage.getItem('id_empresa');
+  // Obtemos o id_empresa, id_gestor e adm do contexto EmpresaContext
+  const { empresaId, idGestor, adm } = useContext(EmpresaContext);
 
   // Função para buscar dados da API
   const fetchData = useCallback(async () => {
@@ -44,9 +44,9 @@ const FuncionariosAtivos = () => {
       setError(null);
 
       const funcionariosAtivos = await fetchFuncionariosAtivosAPI(
-        id_empresa,
-        id_gestor,
-        adm
+        empresaId, // Usando o empresaId do contexto
+        idGestor,   // Usando o idGestor do contexto
+        adm         // Usando o adm do contexto
       );
       setData(funcionariosAtivos);
       setFilteredData(funcionariosAtivos); // Inicializa com todos os dados
@@ -55,26 +55,26 @@ const FuncionariosAtivos = () => {
       setError(error);
       setLoading(false);
     }
-  }, [id_empresa, id_gestor, adm]);
+  }, [empresaId, idGestor, adm]); // Inclui empresaId, idGestor e adm nas dependências
 
   // Armazena a referência da função de atualização para ser usada externamente
   useEffect(() => {
     fetchFuncionariosAtivosRef = fetchData;
   }, [fetchData]);
 
-  // Chama a função fetchData ao carregar o componente
+  // Chama a função fetchData ao carregar o componente ou quando o empresaId mudar
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (empresaId) {
+      fetchData();
+    }
+  }, [empresaId, fetchData]);
 
   // Gera listas únicas para autocomplete a partir dos dados retornados
   const uniqueFuncoesAtuais = [
     ...new Set(data.map((item) => item.descricao_funcao).filter(Boolean)),
   ];
   const uniqueDepartamentosAtuais = [
-    ...new Set(
-      data.map((item) => item.descricao_departamento).filter(Boolean)
-    ),
+    ...new Set(data.map((item) => item.descricao_departamento).filter(Boolean)),
   ];
   const uniqueTiposContrato = [
     ...new Set(data.map((item) => item.tipo_contrato).filter(Boolean)),
@@ -83,7 +83,7 @@ const FuncionariosAtivos = () => {
     ...new Set(data.map((item) => item.gestor).filter(Boolean)),
   ];
   const uniqueAgrupamentos = [
-    ...new Set(data.map((item) => item.nivel_departamento_2).filter(Boolean)),
+    ...new Set(data.map((item) => item.agrupamento).filter(Boolean)),
   ];
 
   // Função de filtragem
@@ -113,7 +113,7 @@ const FuncionariosAtivos = () => {
         ? item.gestor?.toLowerCase().includes(filters.gestor.toLowerCase())
         : true;
       const matchesAgrupamento = filters.agrupamento
-        ? item.nivel_departamento_2
+        ? item.agrupamento
             ?.toLowerCase()
             .includes(filters.agrupamento.toLowerCase())
         : true;
