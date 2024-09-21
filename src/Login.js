@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { TextField, Button, Container, Typography, Box, Alert, CircularProgress } from '@mui/material';
-import { listarEmpresas } from './previsao/Api';
+import { TextField, Button, Container, Typography, Box, Alert, CircularProgress, Link } from '@mui/material';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState(''); // Campo para senha atual ao alterar senha
+  const [newPassword, setNewPassword] = useState(''); // Campo para nova senha ao alterar senha
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState(''); // Adicionado estado para mensagens de sucesso
   const [loading, setLoading] = useState(false);
+  const [isResetPassword, setIsResetPassword] = useState(false); // Alternar entre login e alteração de senha
   const navigate = useNavigate();
 
   // Função de validação de email
@@ -17,51 +20,39 @@ const Login = () => {
     return emailRegex.test(email);
   };
 
-  // Função para carregar as empresas e salvar a primeira no localStorage
-  const fetchEmpresas = async () => {
-    try {
-      const empresasData = await listarEmpresas();
-      
-      // Seleciona a primeira empresa e armazena no localStorage
-      if (empresasData.length > 0) {
-        const primeiraEmpresa = empresasData[0];
-        localStorage.setItem('id_empresa', primeiraEmpresa.id_empresa);
-        localStorage.setItem('empresa_nome', primeiraEmpresa.label); // Adicione o nome da empresa, se necessário
-      }
-    } catch (error) {
-      console.error('Erro ao carregar empresas:', error);
-    }
-  };
-
   // Função para fazer o login (POST)
   const handleLogin = async () => {
     setErrorMessage('');  // Limpa a mensagem de erro anterior
+    setSuccessMessage('');
+
+    // Eliminar espaços em branco no email e senha
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
 
     // Validação de campos
-    if (!email) {
+    if (!trimmedEmail) {
       setErrorMessage("Por favor, preencha o campo de email.");
       return;
     }
 
-    if (!validateEmail(email)) {
+    if (!validateEmail(trimmedEmail)) {
       setErrorMessage("Por favor, insira um email válido.");
       return;
     }
 
-    if (!password) {
+    if (!trimmedPassword) {
       setErrorMessage("Por favor, preencha o campo de senha.");
       return;
     }
 
     setLoading(true); // Ativa o loading enquanto a requisição é processada
 
-
     try {
       const payload = {
         body: JSON.stringify({
           action: "login",
-          email: email,
-          password: password
+          email: trimmedEmail,
+          password: trimmedPassword
         })
       };
 
@@ -74,7 +65,7 @@ const Login = () => {
 
       // Verifica se o status da resposta é 200 e se contém um email válido
       if (response.status === 200 && response.data.body) {
-        const responseBody = JSON.parse(response.data.body); // Verifica se já é um objeto JSON
+        const responseBody = JSON.parse(response.data.body);
 
         if (responseBody.email) {
           // Armazenando os dados no localStorage
@@ -82,8 +73,6 @@ const Login = () => {
           localStorage.setItem('gestor', responseBody.gestor ? responseBody.gestor.toString() : '0');
           localStorage.setItem('adm', responseBody.adm ? responseBody.adm.toString() : '0');
           localStorage.setItem('id_gestor', responseBody.id_gestor ? responseBody.id_gestor.toString() : '0');
-          
-          await fetchEmpresas(); // Carrega as empresas e salva a primeira no localStorage
           
           // Redireciona para a página home
           navigate('/home');
@@ -108,6 +97,70 @@ const Login = () => {
     }
   };
 
+  // Função para alterar a senha
+  const handleChangePassword = async () => {
+    setErrorMessage('');  // Limpa a mensagem de erro anterior
+    setSuccessMessage('');
+
+    // Eliminar espaços em branco no email e senhas
+    const trimmedEmail = email.trim();
+    const trimmedCurrentPassword = currentPassword.trim();
+    const trimmedNewPassword = newPassword.trim();
+
+    // Validação de campos
+    if (!trimmedEmail) {
+      setErrorMessage("Por favor, preencha o campo de email.");
+      return;
+    }
+
+    if (!validateEmail(trimmedEmail)) {
+      setErrorMessage("Por favor, insira um email válido.");
+      return;
+    }
+
+    if (!trimmedCurrentPassword) {
+      setErrorMessage("Por favor, preencha o campo de senha atual.");
+      return;
+    }
+
+    if (!trimmedNewPassword) {
+      setErrorMessage("Por favor, preencha o campo de nova senha.");
+      return;
+    }
+
+    setLoading(true); // Ativa o loading enquanto a requisição é processada
+
+    try {
+      const payload = {
+        body: JSON.stringify({
+          action: "alterar_senha",
+          email: trimmedEmail,
+          password: trimmedCurrentPassword,
+          new_password: trimmedNewPassword
+        })
+      };
+
+      // Fazendo a requisição POST para alterar senha
+      const response = await axios.post("https://oxben1wvjj.execute-api.us-east-1.amazonaws.com/dev/login", payload, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status === 200 && response.data.body) {
+        setSuccessMessage("Senha alterada com sucesso! Você pode agora fazer login."); // Mensagem de sucesso
+        setIsResetPassword(false); // Volta ao estado de login após alteração de senha
+      } else {
+        setErrorMessage("Erro ao alterar a senha. Verifique os dados e tente novamente.");
+      }
+    } catch (error) {
+      console.log("Erro na requisição:", error);
+      setErrorMessage("Erro ao alterar a senha.");
+    } finally {
+      setLoading(false); // Desativa o loading após a requisição
+    }
+  };
+
   return (
     <Container maxWidth="sm">
       <Box
@@ -118,38 +171,103 @@ const Login = () => {
         minHeight="100vh"
       >
         <Typography variant="h4" component="h1" gutterBottom>
-          Login
+          {isResetPassword ? "Alterar Senha" : "Login"}
         </Typography>
-        <TextField
-          label="Email"
-          variant="outlined"
-          fullWidth
-          margin="normal"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <TextField
-          label="Senha"
-          type="password"
-          variant="outlined"
-          fullWidth
-          margin="normal"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {errorMessage && <Alert severity="error" sx={{ mt: 2 }}>{errorMessage}</Alert>}
-        {loading ? (
-          <CircularProgress sx={{ mt: 2 }} />
-        ) : (
-          <Button
-            variant="contained"
-            color="primary"
-            fullWidth
-            onClick={handleLogin}
-            sx={{ mt: 2 }}
-          >
-            Login
-          </Button>
+
+        {/* Formulário de Login */}
+        {!isResetPassword && (
+          <>
+            <TextField
+              label="Email"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              label="Senha"
+              type="password"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {errorMessage && <Alert severity="error" sx={{ mt: 2 }}>{errorMessage}</Alert>}
+            {successMessage && <Alert severity="success" sx={{ mt: 2 }}>{successMessage}</Alert>} {/* Mensagem de sucesso */}
+            {loading ? (
+              <CircularProgress sx={{ mt: 2 }} />
+            ) : (
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={handleLogin}
+                sx={{ mt: 2 }}
+              >
+                Login
+              </Button>
+            )}
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => setIsResetPassword(true)} // Troca para o formulário de alteração de senha
+              sx={{ mt: 2 }}
+            >
+              Alterar Senha
+            </Link>
+          </>
+        )}
+
+        {/* Formulário de Alteração de Senha */}
+        {isResetPassword && (
+          <>
+            <TextField
+              label="Email"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              label="Senha Atual"
+              type="password"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+            <TextField
+              label="Nova Senha"
+              type="password"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            {errorMessage && <Alert severity="error" sx={{ mt: 2 }}>{errorMessage}</Alert>}
+            {successMessage && <Alert severity="success" sx={{ mt: 2 }}>{successMessage}</Alert>} {/* Mensagem de sucesso */}
+            {loading ? (
+              <CircularProgress sx={{ mt: 2 }} />
+            ) : (
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={handleChangePassword}
+                sx={{ mt: 2 }}
+              >
+                Alterar Senha
+              </Button>
+            )}
+            <Button onClick={() => setIsResetPassword(false)} sx={{ mt: 2 }}>
+              Voltar ao Login
+            </Button>
+          </>
         )}
       </Box>
     </Container>
