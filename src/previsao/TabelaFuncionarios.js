@@ -14,8 +14,8 @@ import AlterarDepartamentoDialog from './AlterarDepartamentoDialog'; // Diálogo
 import AlterarFuncaoDialog from './AlterarFuncaoDialog'; // Diálogo de alteração de função
 
 const TabelaFuncionarios = ({ filteredData, fetchData }) => {
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(13);
+  const [page, setPage] = useState(0); // Armazena a página da paginação
+  const [rowsPerPage, setRowsPerPage] = useState(13); // Armazena o número de linhas por página
   const [localData, setLocalData] = useState([]); // Estado local para armazenar os dados passados
   const [openJustificativaDialog, setOpenJustificativaDialog] = useState(false);
   const [openDemissaoDialog, setOpenDemissaoDialog] = useState(false); // Estado para o diálogo de demissão
@@ -111,8 +111,10 @@ const TabelaFuncionarios = ({ filteredData, fetchData }) => {
     try {
       await deletePrevisaoApi(selectedRow.id); // Excluir a previsão
 
-      // Atualiza a lista de dados após a exclusão
-      fetchData();
+      // Atualiza a lista de dados após a exclusão, mas mantém o estado da página e dos filtros
+      fetchData().then(() => {
+        setLocalData((prevData) => [...prevData]); // Atualiza os dados sem reinicializar a paginação
+      });
       setOpenDeleteDialog(false);
       setSelectedRow(null);
     } catch (error) {
@@ -120,10 +122,9 @@ const TabelaFuncionarios = ({ filteredData, fetchData }) => {
     }
   };
 
-  // Atualizar localData quando filteredData mudar
+  // Atualizar localData quando filteredData mudar, mas preserva o estado da página
   useEffect(() => {
     setLocalData(filteredData);
-    setPage(0);
   }, [filteredData]);
 
   // Função para atualizar a linha inteira localmente
