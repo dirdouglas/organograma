@@ -21,11 +21,10 @@ const Filtros = ({
   showTipoContrato = true,
   showGestor = true,
   showAgrupamento = true,
-  showDiferenca = true,
-  showPrevDemissao = true,
-  showConfPrev = true, // Controle para exibir o filtro de confirmação de previsão
+  showDiferenca = true, // Controla a exibição do filtro de Diferença
+  showPrevDemissao = true, // Controla a exibição do filtro de Previsão de Demissão
 }) => {
-
+  
   const inputStyle = {
     height: '35px',
     padding: '0 0px',
@@ -39,6 +38,7 @@ const Filtros = ({
 
   const shrinkLabelStyle = {
     fontSize: '0.75rem',
+    //top: '-20%',
     transform: 'translate(0, -100%) scale(0.75)',
     transition: 'all 0.2s ease-out',
   };
@@ -60,11 +60,8 @@ const Filtros = ({
     paddingBottom: '5px',
   };
 
-  // Função para converter a seleção visual em valor booleano (1 ou 0)
-  const handleConfPrevChange = (event, newValue) => {
-    const confPrevValue = newValue === 'Confirmado' ? 1 : newValue === 'Não Confirmado' ? 0 : '';
-    setFilters(prev => ({ ...prev, confPrev: confPrevValue }));
-  };
+    // Adiciona a opção "Sem Gestor" à lista de gestores
+    const gestoresComOpcaoSemGestor = uniqueGestores.map(g => g || 'Sem Gestor');
 
   return (
     <Grid container spacing={1} style={{ marginTop: '6px', marginBottom: '6px' }}>
@@ -196,9 +193,10 @@ const Filtros = ({
       {showGestor && (
         <Grid item xs={12} sm={2} style={gridItemStyle}>
           <Autocomplete
-            options={uniqueGestores}  // Removida a opção "Sem Gestor"
+            options={gestoresComOpcaoSemGestor}  // Exibe "Sem Gestor" na lista
+            //getOptionLabel={(option) => option || 'Sem Gestor'}  // Exibe "Sem Gestor" para valores null ou undefined
             value={filters.gestor || ''}  // Valor selecionado no dropdown
-            onChange={(event, newValue) => setFilters(prev => ({ ...prev, gestor: newValue || '' }))}  // Atualiza o valor do filtro de gestor
+            onChange={(event, newValue) => setFilters(prev => ({ ...prev, gestor: newValue !== 'Sem Gestor' ? newValue : null }))}  // Define como null quando "Sem Gestor" for selecionado
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -220,7 +218,7 @@ const Filtros = ({
           <Autocomplete
             options={uniqueAgrupamentos}
             value={filters.agrupamento || ''}
-            onChange={(event, newValue) => setFilters(prev => ({ ...prev, agrupamento: newValue || '' }))}  // Atualiza o valor do filtro de agrupamento
+            onChange={(event, newValue) => setFilters(prev => ({ ...prev, agrupamento: newValue || '' }))}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -242,7 +240,7 @@ const Filtros = ({
           <Autocomplete
             options={uniqueDiferenca}
             value={filters.diferenca || ''}
-            onChange={(event, newValue) => setFilters(prev => ({ ...prev, diferenca: newValue || '' }))}  // Atualiza o valor do filtro de Diferença
+            onChange={(event, newValue) => setFilters(prev => ({ ...prev, diferenca: newValue || '' }))}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -264,7 +262,7 @@ const Filtros = ({
           <Autocomplete
             options={uniquePrevDemissao}
             value={filters.prevDemissao || ''}
-            onChange={(event, newValue) => setFilters(prev => ({ ...prev, prevDemissao: newValue || '' }))}  // Atualiza o valor do filtro de Previsão de Demissão
+            onChange={(event, newValue) => setFilters(prev => ({ ...prev, prevDemissao: newValue || '' }))}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -273,28 +271,6 @@ const Filtros = ({
                 fullWidth
                 InputProps={{ ...params.InputProps, style: inputStyle }}
                 InputLabelProps={{ style: filters.prevDemissao ? shrinkLabelStyle : labelStyle }}
-              />
-            )}
-            ListboxProps={{ style: autocompleteStyle['& .MuiAutocomplete-listbox'] }}
-          />
-        </Grid>
-      )}
-
-      {/* Filtro de Confirmação de Previsão */}
-      {showConfPrev && (
-        <Grid item xs={12} sm={2} style={gridItemStyle}>
-          <Autocomplete
-            options={['Confirmado', 'Não Confirmado']}
-            value={filters.confPrev === 1 ? 'Confirmado' : filters.confPrev === 0 ? 'Não Confirmado' : ''}  // Valor selecionado no dropdown
-            onChange={handleConfPrevChange}  // Atualiza o valor do filtro de Confirmação de Previsão
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Confirmação de Previsão"
-                variant="outlined"
-                fullWidth
-                InputProps={{ ...params.InputProps, style: inputStyle }}
-                InputLabelProps={{ style: filters.confPrev ? shrinkLabelStyle : labelStyle }}
               />
             )}
             ListboxProps={{ style: autocompleteStyle['& .MuiAutocomplete-listbox'] }}

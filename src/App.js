@@ -6,6 +6,7 @@ import Login from './Login';     // Componente Login
 import ResumoQuadroPrevisto from './ResumoQuadroPrevisto';
 import FuncionariosAtivos from './FuncionariosAtivos';
 import FuncionariosPrevistos from './FuncionariosPrevistos';
+import Comparativo from './Comparativo';
 import { EmpresaProvider } from './EmpresaContext';  // Importa o EmpresaProvider
 
 const App = () => {
@@ -22,6 +23,7 @@ const App = () => {
           <Route path="/funcionarios-ativos" element={<FuncionariosAtivos />} />
           <Route path="/funcionarios-previstos" element={<FuncionariosPrevistos />} />
           <Route path="/resumo-quadro-previsto" element={<ResumoQuadroPrevisto />} />
+          <Route path="/comparativo" element={<Comparativo />} />
         </Route>
 
         {/* Rota padrão redirecionando para o login */}

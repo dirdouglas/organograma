@@ -256,7 +256,32 @@ export const saveFuncionariosAtivos = async (dataToSend) => {
   }
 };
 
+export const verificarFuncionariosAtivos = async () => {
+  try {
+    // Configura o corpo da requisição com a ação específica
+    const requestBody = {
+      body: JSON.stringify({
+        action: "verificar_funcionarios_ativos"
+      })
+    };
 
+    // Envia a requisição para a API Gateway
+    const response = await axios.post(
+      'https://2gfpdxjv31.execute-api.us-east-1.amazonaws.com/dev/altera-previsao',
+      JSON.stringify(requestBody),  // Stringifica todo o objeto de request
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Erro ao verificar funcionários ativos:', error);
+    throw new Error('Erro ao verificar funcionários ativos');
+  }
+};
 
 
 // src/resumo/api.js

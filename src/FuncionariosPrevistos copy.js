@@ -1,377 +1,305 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import {
-  Container,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Button,
-  TextField,
-  Autocomplete,
-  Grid,
-  IconButton,
-  Box,
-  Backdrop,
-  CircularProgress,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import InfoIcon from '@mui/icons-material/Info';
-import CheckIcon from '@mui/icons-material/Check';
-import AlterarDepartamentoDialog from './AlterarDepartamentoDialog';
-import AlterarFuncaoDialog from './AlterarFuncaoDialog';
+import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
+import { Container, Backdrop, CircularProgress, Alert, Typography, Box, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { EmpresaContext } from './EmpresaContext';
+import TabelaFuncionarios from './previsao/TabelaFuncionarios';
+import Filtros from './previsao/Filtros';
+import FooterLegendas from './previsao/FooterLegendas';
+import NovaVaga from './previsao/NovaVaga';
+import { listarFuncionariosPrevistos } from './previsao/Api';
+
+let fetchFuncionariosPrevistosRef = null;
 
 const FuncionariosPrevistos = () => {
+  const { empresaId, idGestor, adm } = useContext(EmpresaContext);
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
-  const [departamentos, setDepartamentos] = useState([]);
-  const [funcoes, setFuncoes] = useState([]);
-  const [empresaFilter, setEmpresaFilter] = useState({ label: 'AGRO RBT (2)', id_empresa: 2 });
-  const [nomeFilter, setNomeFilter] = useState('');
-  const [funcaoAtualFilter, setFuncaoAtualFilter] = useState('');
-  const [funcaoPrevistaFilter, setFuncaoPrevistaFilter] = useState('');
-  const [departamentoFilter, setDepartamentoFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [novoValorConfirmacao , setNovoValorConfirmacao ] = useState(null);
-
-  // Estados para os dialogs de alteração de departamento e função
-  const [openDialogDepartamento, setOpenDialogDepartamento] = useState(false);
-  const [openDialogFuncao, setOpenDialogFuncao] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isNewVaga, setIsNewVaga] = useState(true);
   const [selectedRow, setSelectedRow] = useState(null);
+  const [confPrevFilter, setConfPrevFilter] = useState(null);
 
-  // Estado para o dialog de justificativa
-  const [openJustificativaDialog, setOpenJustificativaDialog] = useState(false);
-  const [justificativaSelecionada, setJustificativaSelecionada] = useState('');
+  const [demissaoFilter, setDemissaoFilter] = useState(null); // Novo filtro para prev_demissao
+  const [statusFilter, setStatusFilter] = useState(null); // Novo filtro para data_demissao
 
-  const empresas = [
-    { label: 'AGRO RBT (2)', id_empresa: 2 },
-    { label: 'AGRO URU (6)', id_empresa: 6 },
-    { label: 'PFCMO GO (4)', id_empresa: 4 },
-    { label: 'PFCMO MG (8)', id_empresa: 8 },
-  ];
+  const [filters, setFilters] = useState({
+    nomeOuMatricula: '',
+    funcaoAtual: '',
+    funcaoPrevista: '',
+    departamentoAtual: '',
+    departamentoPrevisto: '',
+    tipoContrato: '',
+    prevDemissao: '',
+    gestor: '',
+    prevConf: '',
+    vagas: '',
+    aumentoQuadro: ''
+  });
 
-  const fetchData = async (id_empresa) => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fazer a chamada única para obter funcionários previstos, departamentos e funções
-      const [funcionariosResponse, departamentosResponse, funcoesResponse] = await Promise.all([
-        axios.get(`https://i2vtho4ifl.execute-api.us-east-1.amazonaws.com/dev/listar-previstos?id_empresa=${id_empresa}`),
-        axios.get(`https://jra0np42jc.execute-api.us-east-1.amazonaws.com/dev/departamentos?id_empresa=${id_empresa}`),
-        axios.get(`https://44d5uoizbg.execute-api.us-east-1.amazonaws.com/dev/listar-funcoes?id_empresa=${id_empresa}`)
-      ]);
+      const id_usuario = adm === '0' && idGestor ? idGestor : null;
+      const funcionarios = await listarFuncionariosPrevistos(empresaId, id_usuario);
 
-      setData(funcionariosResponse.data);
-      setFilteredData(funcionariosResponse.data);
-      setDepartamentos(Array.isArray(departamentosResponse.data) ? departamentosResponse.data : []);
-      setFuncoes(Array.isArray(funcoesResponse.data) ? funcoesResponse.data : []);
+      const sortedFuncionarios = funcionarios.sort((a, b) => a.matricula - b.matricula);
+
+      const filteredFuncionarios = sortedFuncionarios.filter((item) => {
+        const matchesConfPrev = confPrevFilter === null || item.prev_confirmada === confPrevFilter;
+        const matchesDemissao = demissaoFilter === null || item.prev_demissao === demissaoFilter;
+        const matchesStatus = statusFilter === null || (statusFilter === 1 ? item.data_demissao !== null : item.data_demissao === null);
+
+        return matchesConfPrev && matchesDemissao && matchesStatus;
+      });
+
+      setData(filteredFuncionarios);
+      setFilteredData(filteredFuncionarios);
       setLoading(false);
     } catch (error) {
-      setError(error);
+      setError('Erro ao carregar os dados.');
       setLoading(false);
     }
-  };
+  }, [adm, empresaId, idGestor, confPrevFilter, demissaoFilter, statusFilter]);
 
   useEffect(() => {
-    if (empresaFilter && empresaFilter.id_empresa) {
-      fetchData(empresaFilter.id_empresa);
-    }
-  }, [empresaFilter]);
+    fetchFuncionariosPrevistosRef = fetchData;
+  }, [fetchData]);
 
   useEffect(() => {
     const filtered = data.filter((item) => {
-      const matchesNome = item.nome_colaborador?.toLowerCase().includes(nomeFilter.toLowerCase());
-      const matchesFuncaoAtual = funcaoAtualFilter ? item.descricao_funcao_atual?.toLowerCase().includes(funcaoAtualFilter.toLowerCase()) : true;
-      const matchesFuncaoPrevista = funcaoPrevistaFilter ? item.descricao_funcao_prevista?.toLowerCase().includes(funcaoPrevistaFilter.toLowerCase()) : true;
-      const matchesDepartamento = departamentoFilter ? item.descricao_departamento?.toLowerCase().includes(departamentoFilter.toLowerCase()) : true;
+      const matchesNomeOuMatricula = item.nome_colaborador.toLowerCase().includes(filters.nomeOuMatricula.toLowerCase()) ||
+                                     String(item.matricula).toLowerCase().includes(filters.nomeOuMatricula.toLowerCase());
+      const matchesFuncaoAtual = filters.funcaoAtual ? item.descricao_funcao_atual?.toLowerCase().includes(filters.funcaoAtual.toLowerCase()) : true;
+      const matchesFuncaoPrevista = filters.funcaoPrevista ? item.descricao_funcao_prevista?.toLowerCase().includes(filters.funcaoPrevista.toLowerCase()) : true;
+      const matchesDepartamentoAtual = filters.departamentoAtual ? item.descricao_departamento?.toLowerCase().includes(filters.departamentoAtual.toLowerCase()) : true;
+      
+      const matchesDepartamentoPrevisto = filters.departamentoPrevisto
+        ? `${item.id_departamento_previsto.slice(2)} - ${item.descricao_departamento}`.toLowerCase().includes(filters.departamentoPrevisto.toLowerCase())
+        : true;
 
-      return matchesNome && matchesFuncaoAtual && matchesFuncaoPrevista && matchesDepartamento;
+      const matchesTipoContrato = filters.tipoContrato ? item.tipo_contrato?.toLowerCase().includes(filters.tipoContrato.toLowerCase()) : true;
+      
+      let matchesPrevDemissao = true;
+      if (filters.prevDemissao) {
+        if (item.prev_demissao === 1 && filters.prevDemissao === 'DEMISSÃO PREVISTA') {
+          matchesPrevDemissao = true;
+        } else if (item.prev_demissao === 0 && item.descricao_tipo_contrato === 'SAFRA' && filters.prevDemissao === 'VERIFICAR DEMISSÃO') {
+          matchesPrevDemissao = true;
+        } else if (
+          item.prev_demissao === 0 &&
+          (item.descricao_tipo_contrato === 'DETERMINADO' || item.descricao_tipo_contrato === 'EXPERIENCIA') &&
+          filters.prevDemissao === 'VERIFICAR EFETIVAÇÃO'
+        ) {
+          matchesPrevDemissao = true;
+        } else {
+          matchesPrevDemissao = false;
+        }
+      }
+
+      const matchesGestor = filters.gestor ? item.gestor?.toLowerCase().includes(filters.gestor.toLowerCase()) : true;
+
+      const matchesPrevConf = filters.prevConf !== '' ? item.prev_confirmada === filters.prevConf : true;
+
+      return matchesNomeOuMatricula && matchesFuncaoAtual && matchesFuncaoPrevista && matchesDepartamentoAtual &&
+             matchesDepartamentoPrevisto && matchesTipoContrato && matchesPrevDemissao && matchesGestor && matchesPrevConf;
     });
 
     setFilteredData(filtered);
-  }, [nomeFilter, funcaoAtualFilter, funcaoPrevistaFilter, departamentoFilter, data]);
+  }, [filters, data]);
 
-  const handleClickOpenDialogDepartamento = (row) => {
+  const handleDialogOpen = (isNovaVaga, row = null) => {
+    setIsNewVaga(isNovaVaga);
     setSelectedRow(row);
-    setOpenDialogDepartamento(true);
+    setDialogOpen(true);
   };
 
-  const handleClickOpenDialogFuncao = (row) => {
-    setSelectedRow(row);
-    setOpenDialogFuncao(true);
+  const handleDialogClose = () => {
+    setDialogOpen(false);
   };
 
-  const handleCloseDialogDepartamento = () => {
-    setOpenDialogDepartamento(false);
+  const handleConfPrevToggle = (event, newFilter) => {
+    setConfPrevFilter(newFilter); 
   };
 
-  const handleCloseDialogFuncao = () => {
-    setOpenDialogFuncao(false);
+  const handleDemissaoToggle = (event, newFilter) => {
+    setDemissaoFilter(newFilter);
   };
 
-  const handleClickOpenJustificativaDialog = (justificativa) => {
-    setJustificativaSelecionada(justificativa || 'SEM JUSTIFICATIVA'); // Exibe "SEM JUSTIFICATIVA" se não houver justificativa
-    setOpenJustificativaDialog(true);
+  const handleStatusToggle = (event, newFilter) => {
+    setStatusFilter(newFilter);
   };
 
-  const handleCloseJustificativaDialog = () => {
-    setOpenJustificativaDialog(false);
-    setJustificativaSelecionada('');
-  };
-
-// Função para confirmar previsão e marcar prev_confirmada = 1
-const confirmarPrevisao = async (row) => {
-  console.log(row.id_funcionario);
-  try {
-
-        // Verifique o valor atual de prev_confirmada
-        const novoValorConfirmacao = row.prev_confirmada === 1 ? 0 : 1;
-
-
-    // Construir o corpo da requisição no formato necessário
-    const requestBody = {
-      httpMethod: "POST",
-      body: JSON.stringify({
-        id_funcionario: String(row.id_funcionario),  // Certifique-se de que id_funcionario esteja presente
-        prev_confirmada: novoValorConfirmacao, // Confirmar previsão
-      }),
-    };
-
-    // Enviar a requisição POST com o formato correto
-    await axios.post(
-      'https://2gfpdxjv31.execute-api.us-east-1.amazonaws.com/dev/altera-previsao', // Substitua pela URL da sua API Lambda
-      requestBody,
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    fetchData(empresaFilter.id_empresa); // Recarrega os dados após a alteração
-  } catch (error) {
-    console.error('Erro ao confirmar a previsão:', error);
-  }
-};
-
-
-
-
-  // Função para definir a cor da linha com base nas condições
-  const getRowColor = (row) => {
-    if (row.prev_confirmada === 1 && row.prev_demissao === 1) {
-      return 'red'; // Vermelho
-    } else if (row.prev_confirmada === 1 && row.prev_vaga === 1) {
-      return 'blue'; // Azul
-    } else if (row.prev_confirmada === 1) {
-      return 'green'; // Verde
-    } else {
-      return 'inherit'; // Cor padrão
+  useEffect(() => {
+    if (empresaId) {
+      fetchData();
     }
-  };
+  }, [empresaId, fetchData]);
+
+  const uniqueDepartamentosPrevistos = useMemo(() => {
+    return [...new Map(
+      data.map(item => [item.id_departamento_previsto, `${item.id_departamento_previsto.slice(2)} - ${item.descricao_departamento}`])
+    ).values()].sort();
+  }, [data]);
+
+  const uniqueFuncoesAtuais = useMemo(() => {
+    return [...new Map(
+      data.map(item => [item.id_funcao_atual, item.descricao_funcao_atual])
+    ).values()].sort();
+  }, [data]);
+
+  const uniqueFuncoesPrevistas = useMemo(() => {
+    return [...new Map(
+      data.map(item => [item.id_funcao_prevista, item.descricao_funcao_prevista])
+    ).values()].sort();
+  }, [data]);
+
+  const uniqueDepartamentosAtuais = [...new Set(data.map(item => item.descricao_departamento))];
+  const uniqueTiposContrato = [...new Set(data.map(item => item.tipo_contrato))];
+  const uniqueGestores = [...new Set(data.map(item => item.gestor))];
+  const uniquePrevDemissao = ['DEMISSÃO PREVISTA', 'VERIFICAR DEMISSÃO', 'VERIFICAR EFETIVAÇÃO'];
 
   return (
-    <Container style={{ padding: '3px', maxWidth: '100%' }}>
+    <Container style={{ padding: '8px', maxWidth: '100%', display: 'flex', flexDirection: 'column' }}>
       <Backdrop open={loading} style={{ zIndex: 1000, color: '#fff' }}>
         <CircularProgress color="inherit" />
       </Backdrop>
 
-      <Box style={{ position: 'sticky', padding: '3px', top: 1, backgroundColor: '#fff', zIndex: 100, marginTop: '3px', marginBottom: '3px' }}>
-        <Grid container alignItems="center" justifyContent="space-between">
-          <Grid item xs={8} md={6}>
-            <Typography variant="h4" style={{ fontWeight: 'bold', color: '#000' }}>
-              Funcionários Previstos
-            </Typography>
-          </Grid>
-          <Grid item xs={12} md={6} sm={3}>
-            <Box display="flex" justifyContent="flex-end" alignItems="center">
-              <Autocomplete
-                options={empresas}
-                getOptionLabel={(option) => option.label}
-                isOptionEqualToValue={(option, value) => option.id_empresa === value.id_empresa}
-                renderInput={(params) => (
-                  <TextField {...params} label="Selecione a Empresa" variant="outlined" fullWidth />
-                )}
-                value={empresaFilter}
-                onChange={(event, newValue) => {
-                  setEmpresaFilter(newValue || { label: '', id_empresa: null });
-                }}
-                style={{ marginRight: '5px', width: '30%', fontSize:'0.8rem'}}
-              />
-
-              <IconButton onClick={() => fetchData(empresaFilter?.id_empresa)}>
-                <RefreshIcon />
-              </IconButton>
-            </Box>
-          </Grid>
-        </Grid>
-
-        <Grid container spacing={2} style={{ marginTop: '1px', marginBottom: '1px' }}>
-          <Grid item xs={12} sm={3}>
-            <TextField
-              label="Nome do Colaborador"
-              variant="outlined"
-              fullWidth
-              value={nomeFilter}
-              onChange={(e) => setNomeFilter(e.target.value)}
-              InputProps={{ style: {height: '5vh', display: 'flex', alignItems: 'center',},
-                inputProps: { style: {height: '4vh', padding: '0 10px', display: 'flex', alignItems: 'center',},},}}
-              InputLabelProps={{style: {lineHeight: '0.9rem', },}}
-            />
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <TextField
-              label="Função Atual"
-              variant="outlined"
-              fullWidth
-              value={funcaoAtualFilter}
-              onChange={(e) => setFuncaoAtualFilter(e.target.value)}
-              InputProps={{ style: {height: '5vh', display: 'flex', alignItems: 'center',},
-                inputProps: { style: {height: '4vh', padding: '0 10px', display: 'flex', alignItems: 'center',},},}}
-              InputLabelProps={{style: {lineHeight: '0.9rem', },}}
-            />
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <TextField
-              label="Função Prevista"
-              variant="outlined"
-              fullWidth
-              value={funcaoPrevistaFilter}
-              onChange={(e) => setFuncaoPrevistaFilter(e.target.value)}
-              InputProps={{ style: {height: '5vh', display: 'flex', alignItems: 'center',},
-                inputProps: { style: {height: '4vh', padding: '0 10px', display: 'flex', alignItems: 'center',},},}}
-              InputLabelProps={{style: {lineHeight: '0.9rem', },}}
-            />
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <TextField
-              label="Departamento"
-              variant="outlined"
-              fullWidth
-              value={departamentoFilter}
-              onChange={(e) => setDepartamentoFilter(e.target.value)}
-              InputProps={{ style: {height: '5vh', display: 'flex', alignItems: 'center',},
-                inputProps: { style: {height: '4vh', padding: '0 10px', display: 'flex', alignItems: 'center',},},}}
-              InputLabelProps={{style: {lineHeight: '0.9rem', },}}
-            />
-          </Grid>
-        </Grid>
-      </Box>
-
       {error && (
         <Alert severity="error" style={{ marginBottom: '3px' }}>
-          Erro ao carregar os dados: {error.message}
+          {error}
         </Alert>
       )}
 
-      <TableContainer component={Paper} style={{ fontSize: '0.3rem'}} >
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow style={{ fontSize: '1REM', padding: '4px 8px'}}>
-              <TableCell style={{ backgroundColor: '#2196f3', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '0px', paddingBottom: '0px' }}>Matrícula</TableCell>
-              <TableCell style={{ backgroundColor: '#2196f3', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '0px', paddingBottom: '0px' }}>Nome do Colaborador</TableCell>
-              <TableCell style={{ backgroundColor: '#2196f3', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '0px', paddingBottom: '0px' }}>Função Atual</TableCell>
-              <TableCell style={{ backgroundColor: '#2196f3', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '0px', paddingBottom: '0px' }}>Função Prevista</TableCell>
-              <TableCell style={{ backgroundColor: '#2196f3', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '0px', paddingBottom: '0px' }}>Departamento</TableCell>
-              <TableCell style={{ backgroundColor: '#2196f3', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '0px', paddingBottom: '0px' }}>Data de Contratação</TableCell>
-              <TableCell style={{ backgroundColor: '#2196f3', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '0px', paddingBottom: '0px' }}>Data de Demissão</TableCell>
-              <TableCell style={{ backgroundColor: '#2196f3', color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', paddingTop: '0px', paddingBottom: '0px' }}>Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredData.map((row, index) => {
-               console.log('Row:', row.id_funcionario); 
-              const rowColor = getRowColor(row); // Obtenha a cor da linha
-              return (
-                <TableRow key={index}>
-                  <TableCell style={{ color: rowColor, fontSize: '0.7rem', padding: '4px 8px' }}>{row.matricula}</TableCell>
-                  <TableCell style={{ color: rowColor, fontSize: '0.7rem', padding: '4px 8px'  }}>{row.nome_colaborador}</TableCell>
-                  <TableCell style={{ color: rowColor, fontSize: '0.7rem', padding: '4px 8px'  }}>{row.descricao_funcao_atual}</TableCell>
-                  <TableCell style={{ color: rowColor, fontSize: '0.7rem', padding: '4px 8px' , cursor: 'pointer' }} onClick={() => handleClickOpenDialogFuncao(row)}>
-                    {row.descricao_funcao_prevista}
-                  </TableCell>
-                  <TableCell style={{ color: rowColor, fontSize: '0.7rem', padding: '4px 8px', cursor: 'pointer' }} onClick={() => handleClickOpenDialogDepartamento(row)}>
-                    {row.descricao_departamento}
-                  </TableCell>
-                  <TableCell style={{ color: rowColor, fontSize: '0.7rem', padding: '4px 8px'  }}>{new Date(row.data_contratacao).toLocaleDateString()}</TableCell>
-                  <TableCell style={{ color: rowColor, fontSize: '0.7rem', padding: '4px 8px'  }}>{row.data_demissao ? new Date(row.data_demissao).toLocaleDateString() : ''}</TableCell>
-                  <TableCell style={{ color: rowColor, fontSize: '0.7rem', padding: '4px 8px'  }}>
-                    <IconButton aria-label="Justificativa" onClick={() => handleClickOpenJustificativaDialog(row.justificativa || 'SEM JUSTIFICATIVA')}>
-                      <InfoIcon />
-                    </IconButton>
-                    <IconButton aria-label="Confirmar Previsão" onClick={() => confirmarPrevisao(row)}>
-                      <CheckIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Typography variant="h6" style={{ fontWeight: 'bold', color: '#000', marginBottom: '2px' }}>
+          Funcionários Previstos
+        </Typography>
 
-      <Dialog open={openDialogDepartamento} onClose={handleCloseDialogDepartamento}>
-        <AlterarDepartamentoDialog
-          open={openDialogDepartamento}
-          onClose={handleCloseDialogDepartamento}
-          selectedRow={selectedRow}
+        <Box display="flex" alignItems="center" gap="16px">
+
+          {/* Filtro de Demissão (prev_demissao) */}
+          <Box border="1px solid #ccc" borderRadius="4px" padding="8px">
+            <Typography style={{ fontWeight: 'bold', color: '#000', marginBottom: '8px', fontSize: '10px' }}>
+              DEMISSÃO
+            </Typography>
+            <ToggleButtonGroup
+              value={demissaoFilter}
+              exclusive
+              onChange={handleDemissaoToggle}
+              aria-label="Filtro de Demissão"
+            >
+              <ToggleButton value={0} aria-label="Sem Demissão" style={{ height: '30px' }}>
+                Sem Demissão
+              </ToggleButton>
+              <ToggleButton value={1} aria-label="Com Demissão" style={{ height: '30px' }}>
+                Com Demissão
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          {/* Filtro de Status (data_demissao) */}
+          <Box border="1px solid #ccc" borderRadius="4px" padding="8px">
+            <Typography style={{ fontWeight: 'bold', color: '#000', marginBottom: '8px', fontSize: '10px' }}>
+              STATUS
+            </Typography>
+            <ToggleButtonGroup
+              value={statusFilter}
+              exclusive
+              onChange={handleStatusToggle}
+              aria-label="Filtro de Status"
+            >
+              <ToggleButton value={0} aria-label="Ativo" style={{ height: '30px' }}>
+                Ativo
+              </ToggleButton>
+              <ToggleButton value={1} aria-label="Demitido" style={{ height: '30px' }}>
+                Demitido
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          {/* Filtro de Confirmação (prev_confirmada) */}
+          <Box border="1px solid #ccc" borderRadius="4px" padding="8px">
+            <Typography style={{ fontWeight: 'bold', color: '#000', marginBottom: '8px', fontSize: '10px' }}>
+              CONFIRMAÇÃO
+            </Typography>
+            <ToggleButtonGroup
+              value={confPrevFilter}
+              exclusive
+              onChange={handleConfPrevToggle}
+              aria-label="Filtro de Confirmação"
+            >
+              <ToggleButton value={0} aria-label="Não Confirmado" style={{ height: '30px' }}>
+                Não Confirmado
+              </ToggleButton>
+              <ToggleButton value={1} aria-label="Confirmado" style={{ height: '30px' }}>
+                Confirmado
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+        </Box>
+      </Box>
+
+      <Filtros
+        filters={filters}
+        setFilters={setFilters}
+        uniqueFuncoesAtuais={uniqueFuncoesAtuais}
+        uniqueFuncoesPrevistas={uniqueFuncoesPrevistas}
+        uniqueDepartamentosAtuais={uniqueDepartamentosAtuais}
+        uniqueDepartamentosPrevistos={uniqueDepartamentosPrevistos}
+        uniqueTiposContrato={uniqueTiposContrato}
+        uniqueGestores={uniqueGestores}
+        uniquePrevDemissao={uniquePrevDemissao}
+        showNomeOuMatricula={true}
+        showFuncaoAtual={true}
+        showFuncaoPrevista={true}
+        showDepartamentoAtual={false}
+        showDepartamentoPrevisto={true}
+        showTipoContrato={false}
+        showPrevDemissao={true}
+        showGestor={true}
+        showAgrupamento={false}
+        showDiferenca={false}
+        showConfPrev={true}
+      />
+
+      <Box style={{ flex: 1, overflow: 'hidden' }}>
+        <TabelaFuncionarios
+          filteredData={filteredData}
           fetchData={fetchData}
-          empresaFilter={empresaFilter}
-          departamentos={departamentos} // Passa os departamentos carregados
+          handleDialogOpen={handleDialogOpen}
         />
-      </Dialog>
+      </Box>
 
-      <Dialog open={openDialogFuncao} onClose={handleCloseDialogFuncao}>
-        <AlterarFuncaoDialog
-          open={openDialogFuncao}
-          onClose={handleCloseDialogFuncao}
-          selectedRow={selectedRow}
-          fetchData={fetchData}
-          empresaFilter={empresaFilter}
-          funcoes={funcoes} // Passa as funções carregadas
+      <NovaVaga
+        open={dialogOpen}
+        onClose={handleDialogClose}
+        isNewVaga={isNewVaga}
+        empresaId={empresaId}
+        rowData={selectedRow}
+        fetchData={fetchData}
+      />
+
+      <Box style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', backgroundColor: '#f9f9f9', padding: '5px 10px', zIndex: 1000 }}>
+        <FooterLegendas
+          tipo="funcionarios_previstos"
+          totalFiltrados={filteredData.length}
+          onNovaVaga={() => handleDialogOpen(true)}
         />
-      </Dialog>
-
-      <Dialog open={openJustificativaDialog} onClose={handleCloseJustificativaDialog}>
-        <DialogTitle>Justificativa</DialogTitle>
-        <DialogContent>
-          <Typography variant="body1">
-            {justificativaSelecionada}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseJustificativaDialog} color="primary">
-            Fechar
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Box style={{ backgroundColor: '#fff', padding: '10px', position: 'fixed', bottom: 0, left: 0, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1200 }}>
-        <Container style={{ display: 'flex', justifyContent: 'space-between', padding: 0 }}>
-          <Typography variant="body1">
-            <strong>Legenda:</strong> 
-            <span style={{ color: 'green', padding: '2px 5px', margin: '0 5px' }}>Confirmada</span>
-            <span style={{ color: 'blue', padding: '2px 5px', margin: '0 5px' }}>Confirmada e Vaga</span>
-            <span style={{ color: 'red', padding: '2px 5px', margin: '0 5px' }}>Confirmada e Demissão</span>
-          </Typography>
-          <Typography variant="h6">
-            <strong>Total de Colaboradores Filtrados: {filteredData.length}</strong>
-          </Typography>
-        </Container>
       </Box>
     </Container>
   );
 };
 
 export default FuncionariosPrevistos;
+
+// Exporta a função de atualização para ser usada externamente
+export const fetchFuncionariosPrevistos = () => {
+  if (fetchFuncionariosPrevistosRef) {
+    fetchFuncionariosPrevistosRef();
+  } else {
+    console.error("A função de atualização não está disponível ainda.");
+  }
+};

@@ -11,7 +11,6 @@ import {
 import {
   fetchFuncionariosAtivos as fetchFuncionariosAtivosAPI,
   saveFuncionariosAtivos,
-  verificarFuncionariosAtivos, // Função para verificar funcionários ativos
 } from './previsao/Api';
 import TabelaAtivos from './ativos/TabelaAtivos';
 import Filtros from './previsao/Filtros';
@@ -138,7 +137,7 @@ const FuncionariosAtivos = () => {
     setFilteredData(filtered);
   }, [filters, data]);
 
-  // Função para salvar dados filtrados e verificar funcionários ativos
+  // Função para salvar dados filtrados
   const handleSave = async () => {
     const dataToSend = filteredData.map((item) => ({
       id_empresa: item.id_empresa,
@@ -151,11 +150,10 @@ const FuncionariosAtivos = () => {
 
     try {
       await saveFuncionariosAtivos(dataToSend);
-      await verificarFuncionariosAtivos(); // Chama a nova função para verificar funcionários ativos
-      alert('Dados enviados e verificação de funcionários ativos concluída!');
+      alert('Dados enviados com sucesso!');
     } catch (error) {
-      console.error('Erro ao enviar ou verificar os dados:', error);
-      alert('Erro ao enviar ou verificar os dados');
+      console.error('Erro ao enviar os dados:', error);
+      alert('Erro ao enviar os dados');
     }
   };
 
