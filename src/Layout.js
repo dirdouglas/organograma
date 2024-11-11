@@ -9,7 +9,7 @@ import { EmpresaContext } from './EmpresaContext';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { fetchFuncionariosAtivos } from './FuncionariosAtivos'; // Ajuste o caminho conforme necessário
 import { fetchFuncionariosPrevistos } from './FuncionariosPrevistos'; // Ajuste o caminho conforme necessário
-import Comparativo from './Comparativo';
+
 
 
 
@@ -124,9 +124,7 @@ const handleRefresh = () => {
         <ListItem button component={Link} to="/resumo-quadro-previsto">
           <ListItemText primary="Resumo Quadro Previsto" />
         </ListItem>
-        <ListItem button component={Link} to="/comparativo">
-          <ListItemText primary="Comparativo" />
-        </ListItem>
+
       </List>
     </div>
   );
