@@ -1,68 +1,65 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
-  AppBar, Box, Toolbar, IconButton, Typography, Drawer, List, ListItem, ListItemText, CssBaseline, Divider, Menu, MenuItem,
+  AppBar,
+  Box,
+  Toolbar,
+  IconButton,
+  Typography,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  CssBaseline,
+  Divider,
+  Collapse,
+  Menu,
+  MenuItem,
 } from '@mui/material';
-import { Menu as MenuIcon, AccountCircle, Logout as LogoutIcon, Settings as SettingsIcon, Home as HomeIcon } from '@mui/icons-material';
-import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import {
+  Menu as MenuIcon,
+  AccountCircle,
+  Logout as LogoutIcon,
+  Settings as SettingsIcon,
+  Home as HomeIcon,
+  ExpandLess,
+  ExpandMore,
+} from '@mui/icons-material';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import SelecaoEmpresa from './home/SelecaoEmpresa';
 import { EmpresaContext } from './EmpresaContext';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import { fetchFuncionariosAtivos } from './FuncionariosAtivos'; // Ajuste o caminho conforme necessário
-import { fetchFuncionariosPrevistos } from './FuncionariosPrevistos'; // Ajuste o caminho conforme necessário
-
-
-
 
 const drawerWidth = 240;
 
 const Layout = () => {
-  //const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState({});
   const { empresaId, changeEmpresaId } = useContext(EmpresaContext);
   const [userEmail, setUserEmail] = useState('');
   const navigate = useNavigate();
 
-
-  // Dentro do componente Layout
-const location = useLocation();
-
-const handleRefresh = () => {
-  console.log('O botão de refresh foi clicado!');
-  if (location.pathname === '/funcionarios-ativos') {
-    // Chama a API de Funcionários Ativos
-    console.log('Atualizando Funcionários Ativos');
-    // Aqui você deve acionar a função de atualização dos Funcionários Ativos
-    fetchFuncionariosAtivos();
-  } else if (location.pathname === '/funcionarios-previstos') {
-    // Chama a API de Funcionários Previstos
-    console.log('Atualizando Funcionários Previstos');
-    // Aqui você deve acionar a função de atualização dos Funcionários Previstos
-    fetchFuncionariosPrevistos();
-  }
-};
-
-
-
-  // Pega dados do localStorage e ajusta o estado da empresa e do email
   useEffect(() => {
-    const email = localStorage.getItem('email');
-    if (email) {
-      setUserEmail(email);
-    }
+    setOpenMenu({
+      planejamento: false,
+      planejamentoCadastros: false,
+      planejamentoRelatorios: false,
+      organograma: false,
+      organogramaLancamentos: false,
+      organogramaRelatorios: false,
+    });
+  }, []);
 
-    const storedEmpresa = localStorage.getItem('id_empresa');
-    if (storedEmpresa) {
-      changeEmpresaId(storedEmpresa);
-    }
-  }, [changeEmpresaId]);
+  const handleToggleMenu = (menu) => {
+    setOpenMenu((prevState) => ({
+      ...prevState,
+      [menu]: !prevState[menu],
+    }));
+  };
 
-  // Lida com a alternância do drawer (menu lateral)
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
   };
 
-  // Lida com o menu do perfil do usuário
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -78,7 +75,6 @@ const handleRefresh = () => {
     navigate('/login');
   };
 
-  // Lida com a alteração da empresa selecionada
   const handleEmpresaChange = (novaEmpresa) => {
     if (novaEmpresa && novaEmpresa.id_empresa) {
       changeEmpresaId(novaEmpresa.id_empresa);
@@ -112,19 +108,81 @@ const handleRefresh = () => {
       <Toolbar />
       <Divider />
       <List>
-        <ListItem button component={Link} to="/home">
-          <ListItemText primary="Home" />
+        {/* Planejamento */}
+        <ListItem button onClick={() => handleToggleMenu('planejamento')}>
+          <ListItemText primary="Planejamento" />
+          {openMenu.planejamento ? <ExpandLess /> : <ExpandMore />}
         </ListItem>
-        <ListItem button component={Link} to="/funcionarios-ativos">
-          <ListItemText primary="Funcionários Ativos" />
+        <Collapse in={openMenu.planejamento} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {/* Nível 2: Cadastros */}
+            <ListItem button onClick={() => handleToggleMenu('planejamentoCadastros')} sx={{ pl: 4 }}>
+              <ListItemText primary="Cadastros" />
+              {openMenu.planejamentoCadastros ? <ExpandLess /> : <ExpandMore />}
+            </ListItem>
+            <Collapse in={openMenu.planejamentoCadastros} timeout="auto" unmountOnExit>
+              {/* Nível 3: Itens em Cadastros */}
+              <ListItem button sx={{ pl: 8 }} component={Link} to="planejamento/cadastros/safra">
+                <ListItemText primary="Safra" />
+              </ListItem>
+              <ListItem button sx={{ pl: 8 }} component={Link} to="planejamento/cadastros/plano">
+                <ListItemText primary="Plano" />
+              </ListItem>
+              <ListItem button sx={{ pl: 8 }} component={Link} to="planejamento/cadastros/atividade">
+                <ListItemText primary="Atividade" />
+              </ListItem>
+              <ListItem button sx={{ pl: 8 }} component={Link} to="/frente">
+                <ListItemText primary="Frente" />
+              </ListItem>
+            </Collapse>
+            {/* Nível 2: Relatórios */}
+            <ListItem button onClick={() => handleToggleMenu('planejamentoRelatorios')} sx={{ pl: 4 }}>
+              <ListItemText primary="Relatórios" />
+              {openMenu.planejamentoRelatorios ? <ExpandLess /> : <ExpandMore />}
+            </ListItem>
+            <Collapse in={openMenu.planejamentoRelatorios} timeout="auto" unmountOnExit>
+              {/* Nível 3: Itens em Relatórios */}
+              <ListItem button sx={{ pl: 8 }} component={Link} to="/desempenho">
+                <ListItemText primary="Desempenho" />
+              </ListItem>
+            </Collapse>
+          </List>
+        </Collapse>
+        <Divider />
+        {/* Organograma */}
+        <ListItem button onClick={() => handleToggleMenu('organograma')}>
+          <ListItemText primary="Organograma" />
+          {openMenu.organograma ? <ExpandLess /> : <ExpandMore />}
         </ListItem>
-        <ListItem button component={Link} to="/funcionarios-previstos">
-          <ListItemText primary="Funcionários Previstos" />
-        </ListItem>
-        <ListItem button component={Link} to="/resumo-quadro-previsto">
-          <ListItemText primary="Resumo Quadro Previsto" />
-        </ListItem>
-
+        <Collapse in={openMenu.organograma} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {/* Nível 2: Lançamentos */}
+            <ListItem button onClick={() => handleToggleMenu('organogramaLancamentos')} sx={{ pl: 4 }}>
+              <ListItemText primary="Lançamentos" />
+              {openMenu.organogramaLancamentos ? <ExpandLess /> : <ExpandMore />}
+            </ListItem>
+            <Collapse in={openMenu.organogramaLancamentos} timeout="auto" unmountOnExit>
+              {/* Nível 3: Itens em Lançamentos */}
+              <ListItem button sx={{ pl: 8 }} component={Link} to="/funcionarios-ativos">
+                <ListItemText primary="Funcionários Ativos" />
+              </ListItem>
+              <ListItem button sx={{ pl: 8 }} component={Link} to="/funcionarios-previstos">
+                <ListItemText primary="Funcionários Previstos" />
+              </ListItem>
+            </Collapse>
+            {/* Nível 2: Relatórios */}
+            <ListItem button onClick={() => handleToggleMenu('organogramaRelatorios')} sx={{ pl: 4 }}>
+              <ListItemText primary="Relatórios" />
+              {openMenu.organogramaRelatorios ? <ExpandLess /> : <ExpandMore />}
+            </ListItem>
+            <Collapse in={openMenu.organogramaRelatorios} timeout="auto" unmountOnExit>
+              {/* Nível 3: Itens em Relatórios */}
+              <ListItem button sx={{ pl: 8 }} component={Link} to="/resumo-quadro-previsto">
+                <ListItemText primary="Resumo de Previstos" />
+              </ListItem>
+            </Collapse>
+          </List>
+        </Collapse>
       </List>
     </div>
   );
@@ -134,7 +192,7 @@ const handleRefresh = () => {
       <CssBaseline />
 
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar sx={{ minHeight: '10px !important', height: '35px !important' }}>
+        <Toolbar>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -145,24 +203,9 @@ const handleRefresh = () => {
             <MenuIcon />
           </IconButton>
 
-          <IconButton
-            color="inherit"
-            aria-label="go home"
-            edge="start"
-            component={Link}
-            to="/home"
-            sx={{ mr: 2 }}
-          >
-            <HomeIcon />
-          </IconButton>
-
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {userEmail ? `Bem-vindo, ${userEmail}` : 'Sistema de Gestão'}
           </Typography>
-
-          <IconButton color="inherit" onClick={handleRefresh}>
-            <RefreshIcon />
-          </IconButton>
 
           <SelecaoEmpresa
             empresaSelecionada={{ label: empresaId, id_empresa: empresaId }}
@@ -207,9 +250,7 @@ const handleRefresh = () => {
           transition: 'margin-left 0.3s',
         }}
       >
-        <Toolbar sx={{ minHeight: '10px !important', height: '35px !important' }}></Toolbar>
-
-        {/* Passa o Outlet para carregar componentes filhos */}
+        <Toolbar />
         <Outlet />
       </Box>
 

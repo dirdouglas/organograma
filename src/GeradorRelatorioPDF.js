@@ -69,7 +69,7 @@ export const gerarRelatorioPDF = (filteredData,empresaNome) => {
                             { text: colaborador.descricao_funcao_atual || '', style: 'tableBody' },
                             { text: colaborador.descricao_departamento || '', style: 'tableBody' },
                             { text: colaborador.data_contratacao ? new Date(colaborador.data_contratacao).toLocaleDateString() : '', style: 'tableBody' },
-                            { text: colaborador.data_demissao ? new Date(colaborador.data_demissao).toLocaleDateString() : '', style: 'tableBody' },
+                            { text: colaborador.data_prevista_demissao ? new Date(colaborador.data_prevista_demissao).toLocaleDateString() : '', style: 'tableBody' },
                             { text: colaborador.justificativa || '', style: 'tableBody' },
                         ]),
                     ],
